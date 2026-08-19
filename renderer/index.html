@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;" />
+    <title>Music Viz</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <canvas id="viz"></canvas>
+
+    <div class="overlay" id="overlay">
+      <div class="panel">
+        <h1>Music Viz</h1>
+        <p class="subtitle">Desktop visualizer — direct PC &amp; Spotify audio</p>
+
+        <button id="start-btn" type="button">Start visualizer</button>
+
+        <div class="instructions">
+          <ol>
+            <li>Play music in <strong>Spotify</strong>, YouTube, or any app.</li>
+            <li>Click <strong>Start visualizer</strong> above.</li>
+            <li>No browser tab sharing — audio is captured from your PC directly.</li>
+          </ol>
+          <p class="note">Press <kbd>Esc</kbd> to exit fullscreen. Everything runs locally.</p>
+        </div>
+
+        <p class="status" id="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="hud hidden" id="hud">
+      <button id="stop-btn" type="button">Stop</button>
+      <span id="level-meter" aria-hidden="true"></span>
+    </div>
+
+    <button id="fullscreen-btn" type="button" class="hidden" aria-label="Enter fullscreen" title="Fullscreen">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+      </svg>
+    </button>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

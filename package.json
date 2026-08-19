@@ -1,0 +1,63 @@
+{
+  "name": "music-viz-desktop",
+  "version": "1.1.0",
+  "description": "Music visualizer desktop app with Butterchurn and system audio loopback",
+  "main": "electron/main.js",
+  "author": "9Jizhu",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite build && electron .",
+    "start": "electron .",
+    "build": "vite build",
+    "dist": "vite build && electron-builder --win nsis",
+    "dist:portable": "vite build && electron-builder --win portable",
+    "release": "vite build && electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "butterchurn": "^2.6.7",
+    "butterchurn-presets": "^2.4.7",
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "electron": "^34.5.8",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "com.musicviz.desktop",
+    "productName": "Music Viz",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/renderer/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Music Viz"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "solisXOi",
+      "repo": "music-viz-desktop",
+      "private": true,
+      "releaseType": "release"
+    }
+  }
+}
