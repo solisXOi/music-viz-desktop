@@ -56,7 +56,6 @@
       "provider": "github",
       "owner": "solisXOi",
       "repo": "music-viz-desktop",
-      "private": true,
       "releaseType": "release"
     }
   }

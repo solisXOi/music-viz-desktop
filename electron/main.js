@@ -21,13 +21,10 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   autoUpdater.setFeedURL({
     provider: "github",
     owner: GITHUB_OWNER,
     repo: GITHUB_REPO,
-    private: true,
-    ...(token ? { token } : {}),
   });
 
   autoUpdater.on("error", (err) => {
