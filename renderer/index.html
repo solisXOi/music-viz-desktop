@@ -23,7 +23,7 @@
             <li>Click <strong>Start visualizer</strong> above.</li>
             <li>No browser tab sharing — audio is captured from your PC directly.</li>
           </ol>
-          <p class="note">Press <kbd>Esc</kbd> to exit fullscreen. Everything runs locally.</p>
+          <p class="note">Press <kbd>Esc</kbd> to exit fullscreen. <kbd>→</kbd> skips a preset, <kbd>D</kbd> hides it.</p>
         </div>
 
         <p class="status" id="status" aria-live="polite"></p>
@@ -33,6 +33,9 @@
     <div class="hud hidden" id="hud">
       <button id="stop-btn" type="button">Stop</button>
       <span id="level-meter" aria-hidden="true"></span>
+      <span id="preset-name" class="preset-name"></span>
+      <button id="skip-btn" type="button" title="Next preset (Right arrow)">Skip</button>
+      <button id="hide-btn" type="button" title="Never show this preset (D)">Hide</button>
     </div>
 
     <button id="fullscreen-btn" type="button" class="hidden" aria-label="Enter fullscreen" title="Fullscreen">

@@ -1,5 +1,6 @@
 import { AudioCapture } from "./audio.js";
 import { VisualEngine, isVisualizerSupported } from "./visuals.js";
+import { shortPresetName } from "./presets.js";
 
 const canvas = document.getElementById("viz");
 const overlay = document.getElementById("overlay");
@@ -8,11 +9,20 @@ const startBtn = document.getElementById("start-btn");
 const stopBtn = document.getElementById("stop-btn");
 const statusEl = document.getElementById("status");
 const levelMeter = document.getElementById("level-meter");
+const presetNameEl = document.getElementById("preset-name");
+const skipBtn = document.getElementById("skip-btn");
+const hideBtn = document.getElementById("hide-btn");
 const fullscreenBtn = document.getElementById("fullscreen-btn");
 
 const desktop = window.desktop;
 const audio = new AudioCapture();
 const engine = new VisualEngine(canvas);
+
+engine.onPresetChange = (key) => {
+  const label = shortPresetName(key);
+  presetNameEl.textContent = label;
+  presetNameEl.title = key || "";
+};
 
 let running = false;
 let rafId = null;
@@ -112,10 +122,18 @@ function stop() {
   startBtn.disabled = false;
   setStatus("");
   levelMeter.style.setProperty("--level", "0%");
+  presetNameEl.textContent = "";
+  presetNameEl.title = "";
 }
 
 startBtn.addEventListener("click", start);
 stopBtn.addEventListener("click", stop);
+skipBtn.addEventListener("click", () => {
+  if (running) engine.skipPreset();
+});
+hideBtn.addEventListener("click", () => {
+  if (running) engine.hideCurrentPreset();
+});
 fullscreenBtn.addEventListener("click", enterFullscreen);
 
 window.addEventListener("resize", () => {
@@ -125,6 +143,15 @@ window.addEventListener("resize", () => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && isFullscreen) {
     exitFullscreen();
+    return;
+  }
+
+  if (!running) return;
+
+  if (e.key === "ArrowRight" || e.key === "n" || e.key === "N") {
+    engine.skipPreset();
+  } else if (e.key === "d" || e.key === "D") {
+    engine.hideCurrentPreset();
   }
 });
 

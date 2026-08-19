@@ -1,5 +1,6 @@
 import butterchurnImport from "butterchurn";
 import butterchurnPresetsImport from "butterchurn-presets";
+import { filterPresetKeys, getPresetActivity, hidePreset } from "./presets.js";
 
 function resolveModule(mod) {
   if (!mod) return mod;
@@ -50,10 +51,14 @@ function rendererOptions(width, height, dpr) {
   };
 }
 
-function preparePreset(raw, punch = 0) {
+function preparePreset(raw, punch = 0, activity = 1) {
   const waveA = raw.baseVals?.wave_a ?? 0.8;
   const mvL = raw.baseVals?.mv_l ?? 0.9;
   const decay = raw.baseVals?.decay ?? 0.98;
+  const warp = raw.baseVals?.warpscale ?? 1;
+  const gamma = raw.baseVals?.gammaadj ?? 1;
+  const motion = raw.baseVals?.warp ?? 0;
+  const echoA = raw.baseVals?.echo_alpha ?? 0;
 
   return {
     ...raw,
@@ -62,10 +67,13 @@ function preparePreset(raw, punch = 0) {
       echo_zoom: 1,
       zoom: 1,
       zoomexp: 1,
-      wave_a: Math.min(1.8, waveA + punch * 0.55),
-      mv_l: Math.min(1.6, mvL + punch * 0.35),
-      decay: Math.max(0.86, decay - punch * 0.07),
-      warpscale: (raw.baseVals?.warpscale ?? 1) * (1 + punch * 0.25),
+      echo_alpha: echoA * activity,
+      gammaadj: 1 + (gamma - 1) * activity,
+      warp: motion * activity,
+      wave_a: Math.min(2, (waveA * 0.7 + punch * 0.95) * activity),
+      mv_l: Math.min(1.8, (mvL * 0.78 + punch * 0.55) * activity),
+      decay: Math.max(0.82, decay + 0.012 * (1 - punch) - punch * 0.11 * activity),
+      warpscale: warp * (0.8 + punch * 0.58) * activity,
     },
   };
 }
@@ -91,8 +99,10 @@ export class VisualEngine {
     this.presetElapsed = 0;
     this.presetDuration = randomDuration();
     this.punchCooldown = 0;
+    this.punchHoldMs = 0;
     this.audioContext = null;
     this.audioNode = null;
+    this.onPresetChange = null;
   }
 
   init(audioContext, audioNode) {
@@ -103,7 +113,7 @@ export class VisualEngine {
     syncCanvas(this.canvas, width, height);
 
     this.presetMap = butterchurnPresets.getPresets();
-    this.presetKeys = Object.keys(this.presetMap);
+    this.refreshPresetKeys();
     if (this.presetKeys.length === 0) {
       throw new Error("No Butterchurn presets found.");
     }
@@ -122,8 +132,13 @@ export class VisualEngine {
     this.loadRandomPreset(0);
   }
 
+  refreshPresetKeys() {
+    this.presetKeys = filterPresetKeys(Object.keys(this.presetMap || {}));
+  }
+
   pickNextPresetKey() {
-    if (this.presetKeys.length <= 1) return this.presetKeys[0];
+    if (this.presetKeys.length === 0) return null;
+    if (this.presetKeys.length === 1) return this.presetKeys[0];
     let key = this.currentPresetKey;
     while (key === this.currentPresetKey) {
       key = this.presetKeys[Math.floor(Math.random() * this.presetKeys.length)];
@@ -135,21 +150,48 @@ export class VisualEngine {
     if (!this.visualizer || !this.presetMap) return;
 
     const key = this.pickNextPresetKey();
+    if (!key) return;
+
     this.currentPresetKey = key;
-    this.visualizer.loadPreset(preparePreset(this.presetMap[key], 0), blendTime);
+    this.punchHoldMs = 0;
+    this.visualizer.loadPreset(
+      preparePreset(this.presetMap[key], 0, getPresetActivity(key)),
+      blendTime
+    );
     this.presetElapsed = 0;
     this.presetDuration = randomDuration();
+    this.onPresetChange?.(key);
+  }
+
+  skipPreset() {
+    this.loadRandomPreset(1.1);
+  }
+
+  hideCurrentPreset() {
+    if (!this.currentPresetKey) return;
+    hidePreset(this.currentPresetKey);
+    this.refreshPresetKeys();
+    this.loadRandomPreset(1);
+  }
+
+  restoreBaseline() {
+    const raw = this.presetMap?.[this.currentPresetKey];
+    if (!raw || !this.visualizer) return;
+    const activity = getPresetActivity(this.currentPresetKey);
+    this.visualizer.loadPreset(preparePreset(raw, 0, activity), 0.5);
   }
 
   accentPunch(intensity) {
     if (!this.visualizer || !this.presetMap || this.punchCooldown > 0) return;
-    if (intensity < 0.62) return;
+    if (intensity < 0.55) return;
 
     const raw = this.presetMap[this.currentPresetKey];
     if (!raw) return;
 
-    this.visualizer.loadPreset(preparePreset(raw, intensity), 0.3);
-    this.punchCooldown = 320;
+    const activity = getPresetActivity(this.currentPresetKey);
+    this.visualizer.loadPreset(preparePreset(raw, intensity * activity, activity), 0.16);
+    this.punchCooldown = 240;
+    this.punchHoldMs = 420;
   }
 
   resize() {
@@ -170,6 +212,11 @@ export class VisualEngine {
     if (!this.visualizer) return;
 
     this.punchCooldown = Math.max(0, this.punchCooldown - dt);
+
+    if (this.punchHoldMs > 0) {
+      this.punchHoldMs = Math.max(0, this.punchHoldMs - dt);
+      if (this.punchHoldMs === 0) this.restoreBaseline();
+    }
 
     if (dynamics?.isHeavyPunch) {
       this.accentPunch(dynamics.punch);

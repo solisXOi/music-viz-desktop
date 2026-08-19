@@ -138,9 +138,12 @@ body {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  max-width: min(92vw, 760px);
   padding: 0.5rem 1rem;
-  border-radius: 999px;
+  border-radius: 16px;
   background: rgba(10, 10, 18, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
@@ -151,7 +154,9 @@ body {
   display: none;
 }
 
-#stop-btn {
+#stop-btn,
+#skip-btn,
+#hide-btn {
   padding: 0.4rem 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
@@ -161,8 +166,19 @@ body {
   cursor: pointer;
 }
 
-#stop-btn:hover {
+#stop-btn:hover,
+#skip-btn:hover,
+#hide-btn:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.preset-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: #b0b0c4;
 }
 
 #level-meter {
