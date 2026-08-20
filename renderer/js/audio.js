@@ -46,6 +46,12 @@ export class AudioCapture {
     this.smoothSaw = 0;
     this.currentGain = BASELINE_GAIN;
     this.punchLevel = 0;
+    this.energyFast = 0;
+    this.energySlow = 0;
+    this.quietMs = 0;
+    this.dropCooldownMs = 0;
+    this.hitTimes = [];
+    this.mood = "groove";
   }
 
   getVisualizerNode() {
@@ -93,6 +99,12 @@ export class AudioCapture {
     this.smoothSaw = 0;
     this.currentGain = BASELINE_GAIN;
     this.punchLevel = 0;
+    this.energyFast = 0;
+    this.energySlow = 0;
+    this.quietMs = 0;
+    this.dropCooldownMs = 0;
+    this.hitTimes = [];
+    this.mood = "groove";
 
     if (this.context.state === "suspended") {
       await this.context.resume();
@@ -137,7 +149,7 @@ export class AudioCapture {
     return { bass, mid, treble, chord, saw, peakiness, overall };
   }
 
-  updateDynamics() {
+  updateDynamics(dt = 16) {
     const bands = this.readBands();
 
     this.smoothBass = this.smoothBass * 0.91 + bands.bass * 0.09;
@@ -167,6 +179,47 @@ export class AudioCapture {
     const punch = Math.min(1, Math.max(bassHit, sawHit * 0.95, chordHit * 0.92));
     this.punchLevel = punch;
 
+    this.dropCooldownMs = Math.max(0, this.dropCooldownMs - dt);
+
+    const instant = bands.overall;
+    this.energyFast = this.energyFast * 0.8 + instant * 0.2;
+    this.energySlow = this.energySlow * 0.995 + instant * 0.005;
+
+    if (this.energyFast < 0.15) this.quietMs += dt;
+    else this.quietMs *= 0.92;
+
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (punch > 0.55) this.hitTimes.push(now);
+    this.hitTimes = this.hitTimes.filter((time) => now - time < 2000);
+    const hitsPerSec = this.hitTimes.length / 2;
+
+    if (this.mood === "calm") {
+      if (this.energySlow > 0.28 || hitsPerSec > 1.8) {
+        this.mood = hitsPerSec > 2.2 && this.energySlow > 0.36 ? "peak" : "groove";
+      }
+    } else if (this.mood === "peak") {
+      if (this.energySlow < 0.24 && hitsPerSec < 1.4) this.mood = "calm";
+      else if (this.energySlow < 0.34 && hitsPerSec < 1.6) this.mood = "groove";
+    } else if (this.energySlow < 0.18 && hitsPerSec < 1.1) {
+      this.mood = "calm";
+    } else if (this.energySlow > 0.4 && hitsPerSec > 2) {
+      this.mood = "peak";
+    }
+
+    const surge = this.energyFast > this.energySlow * 1.5 + 0.07;
+    const heldBack = this.quietMs > 500 || this.energySlow < 0.3;
+    const isDrop =
+      this.dropCooldownMs <= 0 &&
+      punch > 0.62 &&
+      surge &&
+      heldBack &&
+      this.energyFast > 0.26;
+
+    if (isDrop) {
+      this.dropCooldownMs = 12000;
+      this.mood = "peak";
+    }
+
     const targetGain =
       BASELINE_GAIN + punch * (BASS_PEAK_GAIN - BASELINE_GAIN) + chordGlow * 0.9;
     const rising = targetGain > this.currentGain;
@@ -185,6 +238,9 @@ export class AudioCapture {
       punch,
       isPunch: punch > 0.34,
       isHeavyPunch: punch > 0.55,
+      mood: this.mood,
+      isDrop,
+      energy: this.energySlow,
     };
   }
 
@@ -223,5 +279,11 @@ export class AudioCapture {
 
     this.frequencyData = null;
     this.punchLevel = 0;
+    this.energyFast = 0;
+    this.energySlow = 0;
+    this.quietMs = 0;
+    this.dropCooldownMs = 0;
+    this.hitTimes = [];
+    this.mood = "groove";
   }
 }

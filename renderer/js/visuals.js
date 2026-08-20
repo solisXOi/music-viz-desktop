@@ -1,6 +1,6 @@
 import butterchurnImport from "butterchurn";
 import butterchurnPresetsImport from "butterchurn-presets";
-import { filterPresetKeys, getPresetActivity, hidePreset } from "./presets.js";
+import { filterPresetKeys, getPresetActivity, hidePreset, keysForMood } from "./presets.js";
 
 function resolveModule(mod) {
   if (!mod) return mod;
@@ -14,12 +14,24 @@ function resolveModule(mod) {
 const butterchurn = resolveModule(butterchurnImport);
 const butterchurnPresets = resolveModule(butterchurnPresetsImport);
 
-const MIN_PRESET_MS = 10000;
-const MAX_PRESET_MS = 15000;
-const BLEND_SEC = 2.5;
+const MIN_PRESET_MS = 20000;
+const MAX_PRESET_MS = 35000;
+const MIN_HOLD_MS = 12000;
+const MIN_HOLD_AFTER_DROP_MS = 8000;
+const MIN_HOLD_BEFORE_DROP_MS = 2500;
+const BLEND_CALM_SEC = 5.8;
+const BLEND_GROOVE_SEC = 3.4;
+const BLEND_PEAK_SEC = 2.2;
+const BLEND_SKIP_SEC = 1.1;
 
 function randomDuration() {
   return MIN_PRESET_MS + Math.random() * (MAX_PRESET_MS - MIN_PRESET_MS);
+}
+
+function blendForMood(mood) {
+  if (mood === "calm") return BLEND_CALM_SEC;
+  if (mood === "peak") return BLEND_PEAK_SEC;
+  return BLEND_GROOVE_SEC;
 }
 
 function displaySize() {
@@ -100,6 +112,10 @@ export class VisualEngine {
     this.presetDuration = randomDuration();
     this.punchCooldown = 0;
     this.punchHoldMs = 0;
+    this.blendUntil = 0;
+    this.sceneMood = "groove";
+    this.lastMood = "groove";
+    this.minHoldMs = MIN_HOLD_MS;
     this.audioContext = null;
     this.audioNode = null;
     this.onPresetChange = null;
@@ -136,24 +152,34 @@ export class VisualEngine {
     this.presetKeys = filterPresetKeys(Object.keys(this.presetMap || {}));
   }
 
-  pickNextPresetKey() {
-    if (this.presetKeys.length === 0) return null;
-    if (this.presetKeys.length === 1) return this.presetKeys[0];
+  pickNextPresetKey(mood = "groove") {
+    const pool = keysForMood(this.presetKeys, mood);
+    if (pool.length === 0) return null;
+    if (pool.length === 1) return pool[0];
     let key = this.currentPresetKey;
-    while (key === this.currentPresetKey) {
-      key = this.presetKeys[Math.floor(Math.random() * this.presetKeys.length)];
+    let guard = 0;
+    while (key === this.currentPresetKey && guard < 12) {
+      key = pool[Math.floor(Math.random() * pool.length)];
+      guard += 1;
     }
     return key;
   }
 
-  loadRandomPreset(blendTime = BLEND_SEC) {
+  isBlending() {
+    return Date.now() < this.blendUntil;
+  }
+
+  loadRandomPreset(blendTime = BLEND_GROOVE_SEC, mood = this.lastMood) {
     if (!this.visualizer || !this.presetMap) return;
 
-    const key = this.pickNextPresetKey();
+    const key = this.pickNextPresetKey(mood);
     if (!key) return;
 
     this.currentPresetKey = key;
+    this.sceneMood = mood;
     this.punchHoldMs = 0;
+    this.blendUntil = Date.now() + Math.max(0, blendTime) * 1000;
+    this.minHoldMs = blendTime === 0 ? MIN_HOLD_AFTER_DROP_MS : MIN_HOLD_MS;
     this.visualizer.loadPreset(
       preparePreset(this.presetMap[key], 0, getPresetActivity(key)),
       blendTime
@@ -164,14 +190,14 @@ export class VisualEngine {
   }
 
   skipPreset() {
-    this.loadRandomPreset(1.1);
+    this.loadRandomPreset(BLEND_SKIP_SEC, this.lastMood);
   }
 
   hideCurrentPreset() {
     if (!this.currentPresetKey) return;
     hidePreset(this.currentPresetKey);
     this.refreshPresetKeys();
-    this.loadRandomPreset(1);
+    this.loadRandomPreset(BLEND_SKIP_SEC, this.lastMood);
   }
 
   restoreBaseline() {
@@ -183,6 +209,7 @@ export class VisualEngine {
 
   accentPunch(intensity) {
     if (!this.visualizer || !this.presetMap || this.punchCooldown > 0) return;
+    if (this.isBlending()) return;
     if (intensity < 0.55) return;
 
     const raw = this.presetMap[this.currentPresetKey];
@@ -212,19 +239,35 @@ export class VisualEngine {
     if (!this.visualizer) return;
 
     this.punchCooldown = Math.max(0, this.punchCooldown - dt);
+    this.lastMood = dynamics?.mood || this.lastMood;
+
+    if (dynamics?.isDrop && this.presetElapsed >= MIN_HOLD_BEFORE_DROP_MS) {
+      this.loadRandomPreset(0, "peak");
+      return;
+    }
 
     if (this.punchHoldMs > 0) {
       this.punchHoldMs = Math.max(0, this.punchHoldMs - dt);
       if (this.punchHoldMs === 0) this.restoreBaseline();
     }
 
-    if (dynamics?.isHeavyPunch) {
+    if (!this.isBlending() && dynamics?.isHeavyPunch) {
       this.accentPunch(dynamics.punch);
     }
 
+    const musicMood = dynamics?.mood || "groove";
+    const crossedCalm =
+      (this.sceneMood === "calm") !== (musicMood === "calm") &&
+      this.presetElapsed >= this.minHoldMs;
+
     this.presetElapsed += dt;
-    if (this.presetElapsed >= this.presetDuration) {
-      this.loadRandomPreset();
+    if (crossedCalm) {
+      this.loadRandomPreset(blendForMood(musicMood), musicMood);
+      return;
+    }
+
+    if (this.presetElapsed >= this.presetDuration && !this.isBlending()) {
+      this.loadRandomPreset(blendForMood(musicMood), musicMood);
     }
   }
 

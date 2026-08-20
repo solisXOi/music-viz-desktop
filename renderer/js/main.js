@@ -28,6 +28,8 @@ let running = false;
 let rafId = null;
 let lastTime = 0;
 let isFullscreen = false;
+let hudFadeTimer = null;
+const HUD_FADE_MS = 2600;
 
 if (!isVisualizerSupported()) {
   setStatus("WebGL 2 is required.");
@@ -37,6 +39,21 @@ if (!isVisualizerSupported()) {
 function updateFullscreenButton() {
   const show = running && !isFullscreen;
   fullscreenBtn.classList.toggle("hidden", !show);
+  updateHudFade();
+}
+
+function updateHudFade() {
+  if (!running || !isFullscreen) {
+    clearTimeout(hudFadeTimer);
+    hud.classList.remove("faded");
+    return;
+  }
+
+  hud.classList.remove("faded");
+  clearTimeout(hudFadeTimer);
+  hudFadeTimer = setTimeout(() => {
+    if (running && isFullscreen) hud.classList.add("faded");
+  }, HUD_FADE_MS);
 }
 
 async function enterFullscreen() {
@@ -67,7 +84,7 @@ function loop(timestamp) {
   const dt = lastTime ? timestamp - lastTime : 16;
   lastTime = timestamp;
 
-  const dynamics = audio.updateDynamics();
+  const dynamics = audio.updateDynamics(dt);
   engine.update(dt, dynamics);
   engine.draw();
 
@@ -96,6 +113,7 @@ async function start() {
   overlay.classList.add("hidden");
   hud.classList.remove("hidden");
   updateFullscreenButton();
+  updateHudFade();
   setStatus("Listening…", true);
 
   const tracks = audio.stream?.getAudioTracks?.() ?? [];
@@ -118,6 +136,8 @@ function stop() {
   engine.destroy();
   overlay.classList.remove("hidden");
   hud.classList.add("hidden");
+  hud.classList.remove("faded");
+  clearTimeout(hudFadeTimer);
   fullscreenBtn.classList.add("hidden");
   startBtn.disabled = false;
   setStatus("");
@@ -129,15 +149,25 @@ function stop() {
 startBtn.addEventListener("click", start);
 stopBtn.addEventListener("click", stop);
 skipBtn.addEventListener("click", () => {
-  if (running) engine.skipPreset();
+  if (running) {
+    engine.skipPreset();
+    updateHudFade();
+  }
 });
 hideBtn.addEventListener("click", () => {
-  if (running) engine.hideCurrentPreset();
+  if (running) {
+    engine.hideCurrentPreset();
+    updateHudFade();
+  }
 });
 fullscreenBtn.addEventListener("click", enterFullscreen);
 
 window.addEventListener("resize", () => {
   if (running) engine.resize();
+});
+
+window.addEventListener("mousemove", () => {
+  if (running && isFullscreen) updateHudFade();
 });
 
 document.addEventListener("keydown", (e) => {
@@ -147,6 +177,7 @@ document.addEventListener("keydown", (e) => {
   }
 
   if (!running) return;
+  updateHudFade();
 
   if (e.key === "ArrowRight" || e.key === "n" || e.key === "N") {
     engine.skipPreset();
