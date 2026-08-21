@@ -16,12 +16,22 @@ body {
   color: #e8e8f0;
 }
 
-#viz {
+#viz,
+#fields {
   display: block;
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+#fields {
+  z-index: 1;
+  background: #050508;
+}
+
+#fields.hidden {
+  visibility: hidden;
 }
 
 .overlay {
@@ -141,7 +151,7 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
-  max-width: min(92vw, 760px);
+  max-width: min(92vw, 860px);
   padding: 0.5rem 1rem;
   border-radius: 16px;
   background: rgba(10, 10, 18, 0.65);
@@ -162,6 +172,7 @@ body {
 
 #stop-btn,
 #skip-btn,
+#fields-btn,
 #hide-btn {
   padding: 0.4rem 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -174,12 +185,18 @@ body {
 
 #stop-btn:hover,
 #skip-btn:hover,
+#fields-btn:hover,
 #hide-btn:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
+#fields-btn.active {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
 .preset-name {
-  max-width: 220px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

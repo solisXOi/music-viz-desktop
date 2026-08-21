@@ -1,8 +1,9 @@
 import { AudioCapture } from "./audio.js";
-import { VisualEngine, isVisualizerSupported } from "./visuals.js";
+import { VisualEngine, isVisualizerSupported, FIELDS_PRESET_KEY } from "./visuals.js";
 import { shortPresetName } from "./presets.js";
 
 const canvas = document.getElementById("viz");
+const fieldsCanvas = document.getElementById("fields");
 const overlay = document.getElementById("overlay");
 const hud = document.getElementById("hud");
 const startBtn = document.getElementById("start-btn");
@@ -11,17 +12,19 @@ const statusEl = document.getElementById("status");
 const levelMeter = document.getElementById("level-meter");
 const presetNameEl = document.getElementById("preset-name");
 const skipBtn = document.getElementById("skip-btn");
+const fieldsBtn = document.getElementById("fields-btn");
 const hideBtn = document.getElementById("hide-btn");
 const fullscreenBtn = document.getElementById("fullscreen-btn");
 
 const desktop = window.desktop;
 const audio = new AudioCapture();
-const engine = new VisualEngine(canvas);
+const engine = new VisualEngine(canvas, fieldsCanvas);
 
 engine.onPresetChange = (key) => {
   const label = shortPresetName(key);
   presetNameEl.textContent = label;
   presetNameEl.title = key || "";
+  fieldsBtn.classList.toggle("active", key === FIELDS_PRESET_KEY);
 };
 
 let running = false;
@@ -144,6 +147,7 @@ function stop() {
   levelMeter.style.setProperty("--level", "0%");
   presetNameEl.textContent = "";
   presetNameEl.title = "";
+  fieldsBtn.classList.remove("active");
 }
 
 startBtn.addEventListener("click", start);
@@ -151,6 +155,12 @@ stopBtn.addEventListener("click", stop);
 skipBtn.addEventListener("click", () => {
   if (running) {
     engine.skipPreset();
+    updateHudFade();
+  }
+});
+fieldsBtn.addEventListener("click", () => {
+  if (running) {
+    engine.showFields();
     updateHudFade();
   }
 });
@@ -181,6 +191,8 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "ArrowRight" || e.key === "n" || e.key === "N") {
     engine.skipPreset();
+  } else if (e.key === "f" || e.key === "F") {
+    engine.showFields();
   } else if (e.key === "d" || e.key === "D") {
     engine.hideCurrentPreset();
   }
