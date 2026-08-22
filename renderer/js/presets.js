@@ -31,6 +31,7 @@ const REMOVED_PRESETS = new Set([
   "flexi - patternton, district of media, capitol of the united abstractions of fractopia",
   "Geiss + Flexi + Martin - disconnected",
   "_Geiss - untitled",
+  "flexi + geiss - pogo cubes vs. tokamak vs. game of life [stahls jelly 4.5 finish]",
 ]);
 
 const CALM_PRESETS = new Set([
@@ -47,14 +48,11 @@ const CALM_PRESETS = new Set([
   "martin - glass corridor",
   "martin - infinity (2010 update)",
   "Martin - liquid arrows",
-  "martin - reflections on black tiles",
   "martin - stormy sea (2010 update)",
   "shifter - dark tides bdrv mix 2",
   "TonyMilkdrop - Leonardo Da Vinci's Balloon [Flexi - merry-go-round + techstyle]",
   "TonyMilkdrop - Magellan's Nebula [Flexi - you enter first + multiverse]",
   "Unchained & Rovastar - Wormhole Pillars (Hall of Shadows mix)",
-  "Zylot - Star Ornament",
-  "Zylot - True Visionary (Final Mix)",
 ]);
 
 const PEAK_PRESETS = new Set([
@@ -67,7 +65,6 @@ const PEAK_PRESETS = new Set([
   "Cope - The Neverending Explosion of Red Liquid Fire",
   "Eo.S. - glowsticks v2 05 and proton lights (+Krash′s beat code) _Phat_remix02b",
   "fiShbRaiN + Flexi - witchcraft 2.0",
-  "flexi + geiss - pogo cubes vs. tokamak vs. game of life [stahls jelly 4.5 finish]",
   "Flexi + Martin - astral projection",
   "Flexi + stahlregen - jelly showoff parade",
   "Flexi - area 51",
@@ -78,15 +75,35 @@ const PEAK_PRESETS = new Set([
   "Flexi, fishbrain, Geiss + Martin - tokamak witchery",
   "Geiss - Thumb Drum",
   "Geiss, Flexi + Stahlregen - Thumbdrum Tokamak [crossfiring aftermath jelly mashup]",
+  "Goody - The Wild Vort",
   "Krash + Illusion - Spiral Movement",
   "martin + flexi - diamond cutter [prismaticvortex.com] - camille - i wish i wish i wish i was constrained",
   "Martin - acid wiring",
   "martin - another kind of groove",
   "martin - disco mix 4",
+  "martin - reflections on black tiles",
+  "Martin - QBikal - Surface Turbulence IIb",
   "martin - witchcraft reloaded",
   "martin, flexi, fishbrain + sto - enterstate [random mashup]",
   "sawtooth grin roam",
+  "suksma - Rovastar - Sunflower Passion (Enlightment Mix)_Phat_edit + flexi und martin shaders - circumflex in character classes in regular expression",
+  "Zylot - Star Ornament",
+  "Zylot - True Visionary (Final Mix)",
 ]);
+
+/** Exclusive pool for beat-drop cuts. */
+const DROP_PRESETS = [
+  "Zylot - Star Ornament",
+  "$$$ Royal - Mashup (220)",
+  "martin - reflections on black tiles",
+  "Martin - QBikal - Surface Turbulence IIb",
+  "Zylot - True Visionary (Final Mix)",
+  "Goody - The Wild Vort",
+  "Aderrasi - Storm of the Eye (Thunder) - mash0000 - quasi pseudo meta concentrics",
+  "suksma - Rovastar - Sunflower Passion (Enlightment Mix)_Phat_edit + flexi und martin shaders - circumflex in character classes in regular expression",
+  "$$$ Royal - Mashup (197)",
+  "Eo.S. - glowsticks v2 05 and proton lights (+Krash′s beat code) _Phat_remix02b",
+];
 
 /** 1 = normal. Lower values calm a preset without removing it. */
 const PRESET_ACTIVITY = {};
@@ -110,6 +127,14 @@ export function keysForMood(allKeys, mood) {
   if (mood === "peak") return peak.length ? peak : groove.length ? groove : allKeys;
   if (groove.length && peak.length) return [...groove, ...groove, ...peak];
   return groove.length ? groove : allKeys;
+}
+
+export function keysForDrop(allKeys) {
+  const hidden = loadHiddenPresets();
+  const available = new Set(allKeys);
+  const pool = DROP_PRESETS.filter((key) => available.has(key) && !hidden.has(key));
+  if (pool.length > 0) return pool;
+  return keysForMood(allKeys, "peak");
 }
 
 export function isBannedPreset(name) {
