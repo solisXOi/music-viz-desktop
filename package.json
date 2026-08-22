@@ -1,6 +1,6 @@
 {
   "name": "music-viz-desktop",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "Music visualizer desktop app with Butterchurn and system audio loopback",
   "main": "electron/main.js",
   "author": "9Jizhu",
